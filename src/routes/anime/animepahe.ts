@@ -22,11 +22,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animepahe:search:${query}`,
-            async () => await animepahe.search(query),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animepahe:search:${query}`,
+          async () => await animepahe.search(query),
+          REDIS_TTL,
+        )
         : await animepahe.search(query);
 
       reply.status(200).send(res);
@@ -44,11 +44,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animepahe:recent-episodes:${page}`,
-              async () => await animepahe.fetchRecentEpisodes(page),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animepahe:recent-episodes:${page}`,
+            async () => await animepahe.fetchRecentEpisodes(page),
+            REDIS_TTL,
+          )
           : await animepahe.fetchRecentEpisodes(page);
 
         reply.status(200).send(res);
@@ -67,11 +67,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animepahe:info:${id}:${episodePage}`,
-            async () => await animepahe.fetchAnimeInfo(id, episodePage),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animepahe:info:${id}:${episodePage}`,
+          async () => await animepahe.fetchAnimeInfo(id, episodePage),
+          REDIS_TTL,
+        )
         : await animepahe.fetchAnimeInfo(id, episodePage);
 
       reply.status(200).send(res);
@@ -91,16 +91,23 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animepahe:watch:${episodeId}`,
-            async () => await animepahe.fetchEpisodeSources(episodeId),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animepahe:watch:${episodeId}`,
+          async () => await animepahe.fetchEpisodeSources(episodeId),
+          REDIS_TTL,
+        )
         : await animepahe.fetchEpisodeSources(episodeId);
+
+      if (res) {
+        (res as any).headers = {
+          ...((res as any).headers || {}),
+          Referer: 'https://kwik.cx',
+        };
+      }
 
       reply.status(200).send(res);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       reply
         .status(500)
         .send({ message: 'Something went wrong. Contact developer for help.' });

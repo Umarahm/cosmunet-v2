@@ -43,11 +43,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:search:${query}:${page}`,
-            async () => await animekai.search(query, page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:search:${query}:${page}`,
+          async () => await animekai.search(query, page),
+          REDIS_TTL,
+        )
         : await animekai.search(query, page);
 
       reply.status(200).send(res);
@@ -65,11 +65,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animekai:latest-completed:${page}`,
-              async () => await animekai.fetchLatestCompleted(page),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animekai:latest-completed:${page}`,
+            async () => await animekai.fetchLatestCompleted(page),
+            REDIS_TTL,
+          )
           : await animekai.fetchLatestCompleted(page);
 
         reply.status(200).send(res);
@@ -86,11 +86,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:new-releases:${page}`,
-            async () => await animekai.fetchNewReleases(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:new-releases:${page}`,
+          async () => await animekai.fetchNewReleases(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchNewReleases(page);
 
       reply.status(200).send(res);
@@ -106,11 +106,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:recent-added:${page}`,
-            async () => await animekai.fetchRecentlyAdded(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:recent-added:${page}`,
+          async () => await animekai.fetchRecentlyAdded(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchRecentlyAdded(page);
 
       reply.status(200).send(res);
@@ -128,11 +128,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animekai:recent-episodes:${page}`,
-              async () => await animekai.fetchRecentlyUpdated(page),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animekai:recent-episodes:${page}`,
+            async () => await animekai.fetchRecentlyUpdated(page),
+            REDIS_TTL,
+          )
           : await animekai.fetchRecentlyUpdated(page);
 
         reply.status(200).send(res);
@@ -149,11 +149,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:schedule:${date}`,
-            async () => await animekai.fetchSchedule(date),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:schedule:${date}`,
+          async () => await animekai.fetchSchedule(date),
+          REDIS_TTL,
+        )
         : await animekai.fetchSchedule(date);
 
       reply.status(200).send(res);
@@ -168,11 +168,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:spotlight`,
-            async () => await animekai.fetchSpotlight(),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:spotlight`,
+          async () => await animekai.fetchSpotlight(),
+          REDIS_TTL,
+        )
         : await animekai.fetchSpotlight();
 
       reply.status(200).send(res);
@@ -194,11 +194,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animekai:suggestions:${query}`,
-              async () => await animekai.fetchSearchSuggestions(query),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animekai:suggestions:${query}`,
+            async () => await animekai.fetchSearchSuggestions(query),
+            REDIS_TTL,
+          )
           : await animekai.fetchSearchSuggestions(query);
 
         reply.status(200).send(res);
@@ -219,11 +219,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:info:${id}`,
-            async () => await animekai.fetchAnimeInfo(id),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:info:${id}`,
+          async () => await animekai.fetchAnimeInfo(id),
+          REDIS_TTL,
+        )
         : await animekai.fetchAnimeInfo(id);
 
       return reply.status(200).send(res);
@@ -252,21 +252,21 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animekai:watch:${episodeId}:${server}:${dub}`,
-              async () =>
-                await animekai.fetchEpisodeSources(
-                  episodeId,
-                  server,
-                  dub === true ? SubOrSub.DUB : SubOrSub.SUB,
-                ),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animekai:watch:${episodeId}:${server}:${dub}`,
+            async () =>
+              await animekai.fetchEpisodeSources(
+                episodeId,
+                server,
+                dub === true ? SubOrSub.DUB : SubOrSub.SUB,
+              ),
+            REDIS_TTL,
+          )
           : await animekai.fetchEpisodeSources(
-              episodeId,
-              server,
-              dub === true ? SubOrSub.DUB : SubOrSub.SUB,
-            );
+            episodeId,
+            server,
+            dub === true ? SubOrSub.DUB : SubOrSub.SUB,
+          );
 
         reply.status(200).send(res);
       } catch (err) {
@@ -291,19 +291,19 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `animekai:servers:${episodeId}:${dub}`,
-              async () =>
-                await animekai.fetchEpisodeServers(
-                  episodeId,
-                  dub === true ? SubOrSub.DUB : SubOrSub.SUB,
-                ),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `animekai:servers:${episodeId}:${dub}`,
+            async () =>
+              await animekai.fetchEpisodeServers(
+                episodeId,
+                dub === true ? SubOrSub.DUB : SubOrSub.SUB,
+              ),
+            REDIS_TTL,
+          )
           : await animekai.fetchEpisodeServers(
-              episodeId,
-              dub === true ? SubOrSub.DUB : SubOrSub.SUB,
-            );
+            episodeId,
+            dub === true ? SubOrSub.DUB : SubOrSub.SUB,
+          );
 
         reply.status(200).send(res);
       } catch (err) {
@@ -318,11 +318,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:genre-list`,
-            async () => await animekai.fetchGenres(),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:genre-list`,
+          async () => await animekai.fetchGenres(),
+          REDIS_TTL,
+        )
         : await animekai.fetchGenres();
 
       reply.status(200).send(res);
@@ -343,11 +343,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:genre:${genre}:${page}`,
-            async () => await animekai.genreSearch(genre, page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:genre:${genre}:${page}`,
+          async () => await animekai.genreSearch(genre, page),
+          REDIS_TTL,
+        )
         : await animekai.genreSearch(genre, page);
 
       reply.status(200).send(res);
@@ -363,11 +363,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:movies:${page}`,
-            async () => await animekai.fetchMovie(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:movies:${page}`,
+          async () => await animekai.fetchMovie(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchMovie(page);
 
       reply.status(200).send(res);
@@ -383,11 +383,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:ona:${page}`,
-            async () => await animekai.fetchONA(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:ona:${page}`,
+          async () => await animekai.fetchONA(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchONA(page);
 
       reply.status(200).send(res);
@@ -403,11 +403,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:ova:${page}`,
-            async () => await animekai.fetchOVA(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:ova:${page}`,
+          async () => await animekai.fetchOVA(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchOVA(page);
 
       reply.status(200).send(res);
@@ -423,11 +423,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:specials:${page}`,
-            async () => await animekai.fetchSpecial(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:specials:${page}`,
+          async () => await animekai.fetchSpecial(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchSpecial(page);
 
       reply.status(200).send(res);
@@ -443,14 +443,20 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `animekai:tv:${page}`,
-            async () => await animekai.fetchTV(page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `animekai:tv:${page}`,
+          async () => await animekai.fetchTV(page),
+          REDIS_TTL,
+        )
         : await animekai.fetchTV(page);
 
       reply.status(200).send(res);
+      if (res) {
+        (res as any).headers = {
+          ...((res as any).headers || {}),
+          Referer: 'https://kwik.cx',
+        };
+      }
     } catch (err) {
       reply
         .status(500)

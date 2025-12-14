@@ -409,7 +409,10 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
 };
 
 const generateAnilistMeta = (provider: string | undefined = undefined): Anilist => {
-  return new Anilist(new Hianime(), {
+  const hianime = new Hianime();
+  // @ts-ignore
+  hianime.client.defaults.headers.common['Referer'] = 'https://megaplay.buzz';
+  return new Anilist(hianime, {
     url: process.env.PROXY as string | string[],
   });
 };
