@@ -237,7 +237,15 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   fastify.get(
     '/watch/:episodeId',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const episodeId = (request.params as { episodeId: string }).episodeId;
+      let episodeId = (request.params as { episodeId: string }).episodeId;
+      // Decode URL-encoded episodeId to handle special characters like $, &, etc.
+      try {
+        episodeId = decodeURIComponent(episodeId);
+      } catch (e) {
+        // If decoding fails, use the original value
+        console.warn('Failed to decode episodeId:', episodeId, e);
+      }
+
       const server = (request.query as { server: string }).server as StreamingServers;
 
       let dub = (request.query as { dub?: string | boolean }).dub;
@@ -270,6 +278,8 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
 
         reply.status(200).send(res);
       } catch (err) {
+        console.error('Error fetching episode sources:', err);
+        console.error('EpisodeId:', episodeId);
         reply
           .status(500)
           .send({ message: 'Something went wrong. Contact developer for help.' });
@@ -280,7 +290,15 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   fastify.get(
     '/servers/:episodeId',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const episodeId = (request.params as { episodeId: string }).episodeId;
+      let episodeId = (request.params as { episodeId: string }).episodeId;
+      // Decode URL-encoded episodeId to handle special characters like $, &, etc.
+      try {
+        episodeId = decodeURIComponent(episodeId);
+      } catch (e) {
+        // If decoding fails, use the original value
+        console.warn('Failed to decode episodeId:', episodeId, e);
+      }
+
       let dub = (request.query as { dub?: string | boolean }).dub;
       if (dub === 'true' || dub === '1') dub = true;
       else dub = false;
@@ -307,6 +325,8 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
 
         reply.status(200).send(res);
       } catch (err) {
+        console.error('Error fetching episode servers:', err);
+        console.error('EpisodeId:', episodeId);
         reply
           .status(500)
           .send({ message: 'Something went wrong. Contact developer for help.' });

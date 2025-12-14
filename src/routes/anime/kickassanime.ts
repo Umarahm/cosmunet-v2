@@ -12,7 +12,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   fastify.get('/', (_, rp) => {
     rp.status(200).send({
       intro: `Welcome to the kickassanime provider: check out the provider's website @ ${kickassanime.toString.baseUrl}`,
-      routes: ['/:query', '/info', '/watch/:episodeId', '/servers/:episodeId'],
+      routes: ['/:query', '/info', '/watch/*', '/servers/*'],
       documentation: 'https://docs.consumet.org/#tag/kickassanime',
     });
   });
@@ -24,11 +24,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `kickassanime:search:${query}:${page}`,
-            async () => await kickassanime.search(query, page),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `kickassanime:search:${query}:${page}`,
+          async () => await kickassanime.search(query, page),
+          REDIS_TTL,
+        )
         : await kickassanime.search(query, page);
 
       reply.status(200).send(res);
@@ -48,11 +48,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `kickassanime:info:${id}`,
-            async () => await kickassanime.fetchAnimeInfo(id),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `kickassanime:info:${id}`,
+          async () => await kickassanime.fetchAnimeInfo(id),
+          REDIS_TTL,
+        )
         : await kickassanime.fetchAnimeInfo(id);
 
       reply.status(200).send(res);
@@ -64,26 +64,29 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   });
 
   fastify.get(
-    '/watch/:episodeId',
+    '/watch/*',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const episodeId = (request.params as { episodeId: string }).episodeId;
+      const episodeId = (request.params as { '*': string })['*'];
       const server = (request.query as { server: StreamingServers }).server;
 
-      if (typeof episodeId === 'undefined')
+      if (typeof episodeId === 'undefined' || episodeId === '')
         return reply.status(400).send({ message: 'episodeId is required' });
 
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `kickassanime:watch:${episodeId}:${server}`,
-              async () => await kickassanime.fetchEpisodeSources(episodeId, server),
-              REDIS_TTL,
-            )
-          : await kickassanime.fetchEpisodeSources(episodeId, server);
+            redis as Redis,
+            `kickassanime:watch:${episodeId}:${server || 'default'}`,
+            async () => server ? await kickassanime.fetchEpisodeSources(episodeId, server) : await kickassanime.fetchEpisodeSources(episodeId),
+            REDIS_TTL,
+          )
+          : server ? await kickassanime.fetchEpisodeSources(episodeId, server) : await kickassanime.fetchEpisodeSources(episodeId);
 
         reply.status(200).send(res);
       } catch (err) {
+        console.error('Error fetching episode sources:', err);
+        console.error('EpisodeId:', episodeId);
+        console.error('Server:', server);
         reply
           .status(500)
           .send({ message: 'Something went wrong. Contact developer for help.' });
@@ -92,25 +95,27 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   );
 
   fastify.get(
-    '/servers/:episodeId',
+    '/servers/*',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const episodeId = (request.params as { episodeId: string }).episodeId;
+      const episodeId = (request.params as { '*': string })['*'];
 
-      if (typeof episodeId === 'undefined')
+      if (typeof episodeId === 'undefined' || episodeId === '')
         return reply.status(400).send({ message: 'episodeId is required' });
 
       try {
         let res = redis
           ? await cache.fetch(
-              redis as Redis,
-              `kickassanime:servers:${episodeId}`,
-              async () => await kickassanime.fetchEpisodeServers(episodeId),
-              REDIS_TTL,
-            )
+            redis as Redis,
+            `kickassanime:servers:${episodeId}`,
+            async () => await kickassanime.fetchEpisodeServers(episodeId),
+            REDIS_TTL,
+          )
           : await kickassanime.fetchEpisodeServers(episodeId);
 
         reply.status(200).send(res);
       } catch (err) {
+        console.error('Error fetching episode servers:', err);
+        console.error('EpisodeId:', episodeId);
         reply
           .status(500)
           .send({ message: 'Something went wrong. Contact developer for help.' });

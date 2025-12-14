@@ -27,7 +27,7 @@ export const redis =
 export const REDIS_TTL = Number(process.env.REDIS_TTL) || 3600;
 
 const fastify = Fastify({
-  maxParamLength: 1000,
+  maxParamLength: 2000, // Increased to handle longer episodeIds with special characters
   logger: true,
 });
 export const tmdbApi = process.env.TMDB_KEY && process.env.TMDB_KEY;

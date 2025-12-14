@@ -607,13 +607,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
         )
         : await hianime.fetchSpecial(page);
 
-      reply.status(200).send(res);
-      if (res) {
-        (res as any).headers = {
-          ...((res as any).headers || {}),
-          Referer: 'https://hianime.to',
-        };
-      }
+
     } catch (err) {
       reply
         .status(500)
