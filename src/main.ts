@@ -173,7 +173,81 @@ export const tmdbApi = process.env.TMDB_KEY && process.env.TMDB_KEY;
     process.exit(1);
   }
 })();
+// Vercel serverless function handler
+let fastifyReady = false;
+let fastifyReadyPromise: Promise<void> | null = null;
+
+const ensureFastifyReady = async () => {
+  if (!fastifyReady) {
+    if (!fastifyReadyPromise) {
+      fastifyReadyPromise = (async () => {
+        try {
+          await fastify.ready();
+          fastifyReady = true;
+          console.log('[Vercel] Fastify ready');
+        } catch (error) {
+          console.error('[Vercel] Error initializing Fastify:', error);
+          throw error;
+        }
+      })();
+    }
+    await fastifyReadyPromise;
+  }
+};
+
 export default async function handler(req: any, res: any) {
-  await fastify.ready();
-  fastify.server.emit('request', req, res);
+  try {
+    // Ensure Fastify is ready before handling request
+    await ensureFastifyReady();
+
+    // Wrap Fastify request handling in a promise
+    await new Promise<void>((resolve, reject) => {
+      // Set timeout for Vercel (50 seconds max)
+      const timeout = setTimeout(() => {
+        if (!res.headersSent) {
+          res.status(504).json({
+            message: 'Request timeout',
+            error: 'The request took too long to process',
+          });
+        }
+        resolve();
+      }, 50000);
+
+      // Handle response completion
+      const originalEnd = res.end;
+      res.end = function (...args: any[]) {
+        clearTimeout(timeout);
+        originalEnd.apply(res, args);
+        resolve();
+      };
+
+      // Handle errors
+      req.on('error', (err: Error) => {
+        clearTimeout(timeout);
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Request error',
+            error: err.message,
+          });
+        }
+        resolve();
+      });
+
+      res.on('error', (err: Error) => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      // Route the request through Fastify
+      fastify.server.emit('request', req, res);
+    });
+  } catch (error: any) {
+    console.error('[Vercel Handler] Error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'PROD' ? undefined : error?.message,
+      });
+    }
+  }
 }
