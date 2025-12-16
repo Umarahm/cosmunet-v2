@@ -33,9 +33,6 @@
         "dotenv": "^16.0.3",
         "fastify": "^4.10.2",
         "ioredis": "^5.2.4",
-        "puppeteer": "^22.15.0",
-        "puppeteer-extra": "^3.3.6",
-        "puppeteer-extra-plugin-stealth": "^2.11.2",
         "reconnecting-websocket": "^4.4.0",
         "ts-node": "^10.9.1",
         "ws": "^8.8.1"

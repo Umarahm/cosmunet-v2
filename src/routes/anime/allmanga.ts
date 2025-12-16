@@ -1,59 +1,18 @@
 import { FastifyRequest, FastifyReply, FastifyInstance, RegisterOptions } from 'fastify';
 import { load } from 'cheerio';
 import { Redis } from 'ioredis';
+import axios from 'axios';
 import cache from '../../utils/cache';
 import { redis, REDIS_TTL } from '../../main';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-// Add stealth plugin to puppeteer
-puppeteer.use(StealthPlugin());
 
 const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   const BASE_URL = 'https://allmanga.to';
-  let browser: any = null;
-
-  // Initialize browser on startup
-  const initBrowser = async () => {
-    if (!browser) {
-      try {
-        browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--disable-blink-features=AutomationControlled',
-            '--disable-features=IsolateOrigins,site-per-process',
-            '--window-size=1920,1080',
-          ],
-          ignoreHTTPSErrors: true,
-        });
-        console.log('Puppeteer browser initialized for allmanga');
-      } catch (err) {
-        console.error('Failed to initialize browser:', err);
-      }
-    }
-    return browser;
-  };
-
-  // Cleanup browser on shutdown
-  fastify.addHook('onClose', async () => {
-    if (browser) {
-      await browser.close();
-      console.log('Puppeteer browser closed for allmanga');
-    }
-  });
 
   fastify.get('/', (_, rp) => {
     rp.status(200).send({
       intro: "Welcome to the allmanga provider: check out the provider's website @ https://allmanga.to/bangumi/",
       routes: ['/watch'],
-      documentation: 'Custom Allmanga provider for Cosmunet with Puppeteer + Stealth',
+      documentation: 'Custom Allmanga provider for Cosmunet',
     });
   });
 
@@ -66,11 +25,11 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     try {
       let res = redis
         ? await cache.fetch(
-            redis as Redis,
-            `allmanga:watch:${episodeId}`,
-            async () => await fetchEpisodeSources(episodeId),
-            REDIS_TTL,
-          )
+          redis as Redis,
+          `allmanga:watch:${episodeId}`,
+          async () => await fetchEpisodeSources(episodeId),
+          REDIS_TTL,
+        )
         : await fetchEpisodeSources(episodeId);
 
       reply.status(200).send(res);
@@ -84,172 +43,33 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   });
 
   async function fetchEpisodeSources(episodeId: string) {
-    let page: any = null;
-    
     try {
       // Clean up episodeId - remove leading/trailing slashes
       const cleanEpisodeId = episodeId.replace(/^\/+|\/+$/g, '');
       const episodeUrl = `${BASE_URL}/bangumi/${cleanEpisodeId}`;
 
-      // Initialize browser if not already done
-      const browserInstance = await initBrowser();
-      if (!browserInstance) {
-        throw new Error('Failed to initialize browser');
-      }
+      console.log(`Fetching: ${episodeUrl}`);
 
-      // Create a new page
-      page = await browserInstance.newPage();
-
-      // Set viewport and user agent
-      await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
-
-      // Set extra headers
-      await page.setExtraHTTPHeaders({
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0',
+      // Fetch the page using axios
+      const response = await axios.get(episodeUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Referer': BASE_URL,
+        },
+        timeout: 30000,
       });
 
-      // Evaluate some JavaScript to make the browser look more real
-      await page.evaluateOnNewDocument(() => {
-        // Override the navigator.webdriver property
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => false,
-        });
-
-        // Override the navigator.plugins to make it look like a real browser
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => [1, 2, 3, 4, 5],
-        });
-
-        // Override the navigator.languages to make it look more real
-        Object.defineProperty(navigator, 'languages', {
-          get: () => ['en-US', 'en'],
-        });
-
-        // Add Chrome object
-        (window as any).chrome = {
-          runtime: {},
-        };
-
-        // Override permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters: any) =>
-          parameters.name === 'notifications'
-            ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
-            : originalQuery(parameters);
-      });
-
-      console.log(`Navigating to: ${episodeUrl}`);
-
-      // Array to store captured video URLs from network requests
-      const capturedUrls: string[] = [];
-
-      // Enable request interception to capture m3u8 URLs
-      await page.setRequestInterception(true);
-      
-      page.on('request', (request: any) => {
-        request.continue();
-      });
-
-      page.on('response', async (response: any) => {
-        const url = response.url();
-        // Capture m3u8 URLs and wixstatic URLs
-        if (url.includes('.m3u8') || 
-            url.includes('wixstatic.com') || 
-            url.includes('repackager.wixmp.com')) {
-          console.log('Captured URL from network:', url);
-          if (!capturedUrls.includes(url)) {
-            capturedUrls.push(url);
-          }
-        }
-      });
-
-      // Navigate to the page and wait for network to be idle
-      await page.goto(episodeUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      });
-
-      console.log('Page loaded, waiting for Cloudflare...');
-
-      // Wait for Cloudflare challenge to complete
-      // Try to wait for the challenge to disappear (up to 30 seconds)
-      let cloudflareCleared = false;
-      for (let i = 0; i < 30; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const currentContent = await page.content();
-        const currentTitle = await page.title();
-        
-        // Check if Cloudflare challenge is gone
-        if (!currentTitle.includes('Just a moment') && 
-            !currentTitle.includes('Attention Required') &&
-            !currentContent.includes('challenge-platform') &&
-            !currentContent.includes('cf-browser-verification')) {
-          cloudflareCleared = true;
-          console.log(`Cloudflare cleared after ${i + 1} seconds`);
-          break;
-        }
-      }
-
-      if (!cloudflareCleared) {
-        await page.close();
-        throw new Error('Cloudflare challenge still active after 30 seconds. The site may be blocking automated access.');
-      }
-
-      // Try to wait for video player elements to appear
-      try {
-        await Promise.race([
-          page.waitForSelector('iframe', { timeout: 10000 }),
-          page.waitForSelector('video', { timeout: 10000 }),
-          page.waitForSelector('[data-player]', { timeout: 10000 }),
-          page.waitForSelector('.player', { timeout: 10000 }),
-          new Promise(resolve => setTimeout(resolve, 10000)),
-        ]);
-        console.log('Video player element found');
-      } catch (err) {
-        console.log('No video player element found, continuing anyway');
-      }
-
-      // Wait a bit more for any dynamic content to load and video player to initialize
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Get the page content
-      const content = await page.content();
-
+      const content = response.data;
       console.log('Page content length:', content.length);
-      console.log('Captured URLs from network:', capturedUrls.length);
-
-      // Close the page
-      await page.close();
 
       const $ = load(content);
       const sources: any[] = [];
-
-      // Add captured URLs from network requests first (most reliable)
-      capturedUrls.forEach(url => {
-        if (url.includes('.m3u8')) {
-          sources.push({
-            url: url,
-            quality: 'auto',
-            isM3U8: true,
-            source: 'network',
-          });
-          console.log('Added source from network:', url);
-        }
-      });
 
       console.log('Page loaded successfully, extracting sources from HTML...');
 
@@ -257,7 +77,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       let iframeSrc: string | null = null;
       const iframes = $('iframe');
       console.log(`Found ${iframes.length} iframes`);
-      
+
       $('iframe').each((i, el) => {
         const src = $(el).attr('src');
         console.log(`Iframe ${i} src:`, src);
@@ -328,8 +148,8 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
         if (wixmpMatches) {
           wixmpMatches.forEach(url => {
             const cleanUrl = url.replace(/[\\'")\]},;]+$/, '');
-            if ((cleanUrl.includes('.m3u8') || cleanUrl.includes('video')) && 
-                !sources.find(s => s.url === cleanUrl)) {
+            if ((cleanUrl.includes('.m3u8') || cleanUrl.includes('video')) &&
+              !sources.find(s => s.url === cleanUrl)) {
               console.log('Found wixmp URL in script:', cleanUrl);
               sources.push({
                 url: cleanUrl,
@@ -400,7 +220,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
       // Look for video player data attributes
       $('[data-player], [data-video], [data-src], .player, .video-player, #video-player').each((i, el) => {
         const dataAttrs = ['data-player', 'data-video', 'data-src', 'data-source', 'data-file'];
-        
+
         dataAttrs.forEach(attr => {
           const dataValue = $(el).attr(attr);
           if (dataValue) {
@@ -439,62 +259,19 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
         new Map(sources.map(item => [item.url, item])).values()
       );
 
-      // If we found an iframe but no direct sources, try to load the iframe
+      // If we found an iframe but no direct sources, try to fetch the iframe
       if (iframeSrc && (uniqueSources.length === 0 || !uniqueSources.some(s => s.isM3U8))) {
-        console.log('Trying to load iframe for additional sources:', iframeSrc);
+        console.log('Trying to fetch iframe for additional sources:', iframeSrc);
         try {
-          const iframePage = await browserInstance.newPage();
-          const iframeCapturedUrls: string[] = [];
-
-          // Enable request interception for iframe
-          await iframePage.setRequestInterception(true);
-          
-          iframePage.on('request', (request: any) => {
-            request.continue();
-          });
-
-          iframePage.on('response', async (response: any) => {
-            const url = response.url();
-            if (url.includes('.m3u8') || 
-                url.includes('wixstatic.com') || 
-                url.includes('repackager.wixmp.com')) {
-              console.log('Captured URL from iframe network:', url);
-              if (!iframeCapturedUrls.includes(url)) {
-                iframeCapturedUrls.push(url);
-              }
-            }
-          });
-
-          await iframePage.setViewport({ width: 1920, height: 1080 });
-          await iframePage.setUserAgent(
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          );
-          await iframePage.setExtraHTTPHeaders({
-            'Referer': episodeUrl,
-          });
-          
-          await iframePage.goto(iframeSrc, {
-            waitUntil: 'domcontentloaded',
+          const iframeResponse = await axios.get(iframeSrc, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': episodeUrl,
+            },
             timeout: 30000,
           });
 
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-          // Add captured URLs from iframe network
-          iframeCapturedUrls.forEach(url => {
-            if (url.includes('.m3u8') && !sources.find(s => s.url === url)) {
-              console.log('Adding source from iframe network:', url);
-              sources.push({
-                url: url,
-                quality: 'auto',
-                isM3U8: true,
-                source: 'iframe-network',
-              });
-            }
-          });
-
-          const iframeContent = await iframePage.content();
-          await iframePage.close();
+          const iframeContent = iframeResponse.data;
 
           // Look for wixstatic URLs in iframe
           const wixMatches = iframeContent.match(/https?:\/\/[^\s"']*wixstatic\.com[^\s"']*\.m3u8[^\s"']*/g);
@@ -585,22 +362,13 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
     } catch (err: any) {
       console.error('Error fetching Allmanga episode sources:', err.message);
 
-      // Close page if it's still open
-      if (page) {
-        try {
-          await page.close();
-        } catch (e) {
-          // Ignore close errors
-        }
-      }
-
       // Provide more specific error messages
-      if (err.message.includes('Cloudflare')) {
-        throw err; // Pass through our custom Cloudflare error
-      } else if (err.message.includes('timeout')) {
+      if (err.response?.status === 403 || err.message.includes('Cloudflare')) {
+        throw new Error('Access denied. The site may be blocking automated access.');
+      } else if (err.message.includes('timeout') || err.code === 'ECONNABORTED') {
         throw new Error('Request timeout. Allmanga.to may be slow or unreachable.');
-      } else if (err.message.includes('navigation')) {
-        throw new Error('Failed to navigate to episode page. It may not exist or be unavailable.');
+      } else if (err.response?.status === 404) {
+        throw new Error('Episode not found. It may not exist or be unavailable.');
       }
 
       throw new Error(`Failed to fetch episode sources: ${err.message}`);
