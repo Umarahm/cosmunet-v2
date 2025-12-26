@@ -6,7 +6,7 @@ import cache from '../../utils/cache';
 import { redis, REDIS_TTL } from '../../main';
 
 const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
-  const BASE_URL = 'https://allmanga.to';
+  const BASE_URL = 'https://allanime.day';
 
   fastify.get('/', (_, rp) => {
     rp.status(200).send({

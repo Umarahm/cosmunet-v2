@@ -9,6 +9,7 @@ import animesaturn from './animesaturn';
 import kickassanime from './kickassanime';
 import animeyy from './animeyy';
 import allmanga from './allmanga';
+import anizone from './anizone';
 
 const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   await fastify.register(animepahe, { prefix: '/animepahe' });
@@ -19,6 +20,7 @@ const routes = async (fastify: FastifyInstance, options: RegisterOptions) => {
   await fastify.register(kickassanime, { prefix: '/kickassanime' });
   await fastify.register(animeyy, { prefix: '/animeyy' });
   await fastify.register(allmanga, { prefix: '/allmanga' });
+  await fastify.register(anizone, { prefix: '/anizone' });
 
   fastify.get('/', async (request: any, reply: any) => {
     reply.status(200).send('Welcome to Consumet Anime 🗾');
